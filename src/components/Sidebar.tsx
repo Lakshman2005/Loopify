@@ -30,7 +30,7 @@ export function Sidebar({ className = "" }: SidebarProps) {
           <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
             <Music className="h-5 w-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-foreground">StreamFlow</span>
+          <span className="text-xl font-bold text-foreground">Loopify</span>
         </div>
 
         {/* Main Navigation */}

@@ -8,6 +8,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { MusicPlayer } from "@/components/MusicPlayer";
 import Home from "./pages/Home";
 import Search from "./pages/Search";
+import Library from "./pages/Library";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,13 @@ const App = () => {
                     } />
                     <Route path="/search" element={
                       <Search 
+                        onPlayTrack={handlePlayTrack}
+                        currentTrack={currentTrack}
+                        isPlaying={isPlaying}
+                      />
+                    } />
+                    <Route path="/library" element={
+                      <Library 
                         onPlayTrack={handlePlayTrack}
                         currentTrack={currentTrack}
                         isPlaying={isPlaying}

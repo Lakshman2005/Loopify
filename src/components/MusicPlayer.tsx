@@ -3,6 +3,7 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, Heart, Shuffle, Repeat } f
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 
 interface Track {
   id: string;
@@ -20,6 +21,7 @@ interface MusicPlayerProps {
   onPlayPause: () => void;
   onNext: () => void;
   onPrevious: () => void;
+  onSeek?: (time: number) => void;
 }
 
 export function MusicPlayer({ 
@@ -27,13 +29,87 @@ export function MusicPlayer({
   isPlaying, 
   onPlayPause, 
   onNext, 
-  onPrevious 
+  onPrevious,
+  onSeek
 }: MusicPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState([75]);
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
   const [isLiked, setIsLiked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const { toast } = useToast();
+
+  // Audio element effects
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack?.url) return;
+
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleLoadStart = () => setIsLoading(true);
+    const handleCanPlay = () => setIsLoading(false);
+    const handleError = () => {
+      setIsLoading(false);
+      toast({
+        title: "Playback Error",
+        description: "Unable to play this track",
+        variant: "destructive"
+      });
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadstart', handleLoadStart);
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('error', handleError);
+    audio.addEventListener('ended', onNext);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadstart', handleLoadStart);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('error', handleError);
+      audio.removeEventListener('ended', onNext);
+    };
+  }, [currentTrack, onNext, toast]);
+
+  // Play/pause control
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.play().catch(console.error);
+    } else {
+      audio.pause();
+    }
+  }, [isPlaying]);
+
+  // Volume control
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = volume[0] / 100;
+    }
+  }, [volume]);
+
+  // Track change
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && currentTrack?.url) {
+      audio.src = currentTrack.url;
+      setCurrentTime(0);
+    }
+  }, [currentTrack]);
+
+  const handleSeek = (value: number[]) => {
+    const newTime = value[0];
+    setCurrentTime(newTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
+    onSeek?.(newTime);
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -52,7 +128,11 @@ export function MusicPlayer({
   }
 
   return (
-    <Card className="fixed bottom-0 left-0 right-0 h-24 bg-card/95 backdrop-blur-lg border-t border-glass z-50">
+    <>
+      {/* Hidden audio element for playback */}
+      <audio ref={audioRef} preload="metadata" />
+      
+      <Card className="fixed bottom-0 left-0 right-0 h-24 bg-card/95 backdrop-blur-lg border-t border-glass z-50">
       <div className="flex items-center justify-between h-full px-4">
         {/* Track Info */}
         <div className="flex items-center gap-3 min-w-0 w-1/4">
@@ -124,7 +204,7 @@ export function MusicPlayer({
               value={[currentTime]}
               max={currentTrack.duration}
               step={1}
-              onValueChange={(value) => setCurrentTime(value[0])}
+              onValueChange={handleSeek}
               className="flex-1"
             />
             <span className="text-xs text-muted-foreground w-10">
@@ -146,5 +226,6 @@ export function MusicPlayer({
         </div>
       </div>
     </Card>
+    </>
   );
 }
